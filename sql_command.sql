@@ -383,3 +383,70 @@ SELECT am.amname AS index_method, opc.opcname AS opclass_name
     WHERE opc.opcmethod = am.oid
     ORDER BY index_method, opclass_name;
 
+
+
+INSERT INTO invert01 (doc_id, keyword) SELECT id, s.keyword as keyword from docs01 as d, unnest(string_to_array(d.doc, ' ')) s(keyword) order by id;
+CREATE TABLE stop_words (word TEXT unique);
+insert into invert02(doc_id, keyword) select id, s.keyword from docs02 as d, unnest(string_to_array(lower(d.doc), ' ')) s(keyword) where s.keyword not in (select word from stop_words);
+
+---------
+
+The goal of this assignment is to run these queries:
+
+SELECT id, doc FROM docs03 WHERE '{conversation}' <@ string_to_array(lower(doc), ' ');
+EXPLAIN SELECT id, doc FROM docs03 WHERE '{conversation}' <@ string_to_array(lower(doc), ' ');
+
+CREATE TABLE docs03 (id SERIAL, doc TEXT, PRIMARY KEY(id));
+CREATE INDEX array03 ON docs03 USING gin(string_to_array(lower(doc), ' ')  array_ops);
+
+INSERT INTO docs03 (doc) VALUES
+('It is the nature of an interpreter to be able to have'),
+('an interactive conversation as shown above A compiler'),
+('needs to be handed the entire program in a file and then it runs a'),
+('process to translate the highlevel source code into machine language'),
+('and then the compiler puts the resulting machine language into a file'),
+('If you have a Windows system often these executable machine language'),
+('programs have a suffix of exe or dll which stand for executable'),
+('and dynamic link library respectively In Linux and Macintosh there'),
+('is no suffix that uniquely marks a file as executable'),
+('If you were to open an executable file in a text editor it would look');
+
+INSERT INTO docs03 (doc) SELECT 'Neon ' || generate_series(10000,20000);
+
+
+CREATE INDEX fulltext03 ON docs03 USING gin(to_tsvector('english', doc));
+
+It might take from a few seconds to a minute or two before PostgreSQL catches up with its indexing. The autograder wont work if the index is incomplete. If the EXPLAIN command says that it is using Seq Scan - the index has not completed yet. Run the above EXPLAIN multiple times if necessary until you verify that PostgreSQL has finished making the index:
+
+EXPLAIN SELECT id, doc FROM docs03 WHERE '{conversation}' <@ string_to_array(lower(doc), ' ');
+
+TIME PASSES......
+
+
+EXPLAIN SELECT id, doc FROM docs03 WHERE '{conversation}' <@ string_to_array(lower(doc), ' ');
+--------------------------------------------------------------
+The goal of this assignment is to run these queries:
+
+SELECT id, doc FROM docs03 WHERE to_tsquery('english', 'conversation') @@ to_tsvector('english', doc);
+EXPLAIN SELECT id, doc FROM docs03 WHERE to_tsquery('english', 'conversation') @@ to_tsvector('english', doc);
+
+drop table docs03;
+CREATE TABLE docs03 (id SERIAL, doc TEXT, PRIMARY KEY(id));
+CREATE INDEX fulltext03 ON docs03 USING gin(to_tsvector('english', doc));
+
+INSERT INTO docs03 (doc) VALUES
+('It is the nature of an interpreter to be able to have'),
+('an interactive conversation as shown above A compiler'),
+('needs to be handed the entire program in a file and then it runs a'),
+('process to translate the highlevel source code into machine language'),
+('and then the compiler puts the resulting machine language into a file'),
+('If you have a Windows system often these executable machine language'),
+('programs have a suffix of exe or dll which stand for executable'),
+('and dynamic link library respectively In Linux and Macintosh there'),
+('is no suffix that uniquely marks a file as executable'),
+('If you were to open an executable file in a text editor it would look');
+
+INSERT INTO docs03 (doc) SELECT 'Neon ' || generate_series(10000,20000);
+
+EXPLAIN SELECT id, doc FROM docs03 WHERE to_tsquery('english', 'instructions') @@ to_tsvector('english', doc);
+
